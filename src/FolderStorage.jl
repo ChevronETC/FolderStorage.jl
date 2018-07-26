@@ -2,7 +2,7 @@ __precompile__(true)
 
 module FolderStorage
 
-using AbstractStorage
+using AbstractStorage, Lumberjack
 
 struct Folder <: Container
     foldername::String
