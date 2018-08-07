@@ -25,8 +25,8 @@ function writebytes(c::Folder, o::AbstractString, data::AbstractArray{UInt8})
     Lumberjack.error("problem writing to $c/$o in 10 attempts.")
 end
 
-function Base.write(c::Folder, o::AbstractString, data::AbstractArray)
-    if eltype(data) <: Number
+function Base.write(c::Folder, o::AbstractString, data::AbstractArray{T}) where {T}
+    if T <: Number
         writebytes(c, o, reinterpret(UInt8, data))
         return nothing
     end
@@ -42,8 +42,8 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
     filename = joinpath(c.foldername, o)
     if _haslibFolderStorage
         r = ccall((:readbytes_threaded_single_file, _libFolderStorage), Int,
-            (Cstring,  Ptr{UInt8}, Csize_t,           Cint,     Cint),
-             filename, data,       length(data),      nthreads, c.nretry)
+            (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
+             filename, data,       length(data), nthreads, c.nretry)
         r == 0 || Lumberjack.error("problem reading from $c/$o.")
         return nothing
     end
@@ -58,6 +58,7 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
         end
     end
     Lumberjack.error("problem reading from $c/$o in 10 attempts.")
+    nothing
 end
 
 function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_CORES) where {T}
@@ -75,7 +76,7 @@ function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_CORES
 
     io = IOBuffer(databytes)
     data .= deserialize(io)
-    return nothing
+    nothing
 end
 
 function Base.read(c::Folder, o::String, _T::Type{T}, n::NTuple{N}, nthreads=Sys.CPU_CORES)  where {T,N}
@@ -94,8 +95,8 @@ function writebytes_pieces(c::Folder, o::String, data::AbstractArray{UInt8}, nth
     nothing
 end
 
-function writepieces(c::Folder, o::String, data::AbstractArray, nthreads::Int=Sys.CPU_CORES)
-    if eltype(data) <: Number
+function writepieces(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
+    if T <: Number
         writebytes_pieces(c, o, reinterpret(UInt8,data), nthreads)
         return nothing
     end
