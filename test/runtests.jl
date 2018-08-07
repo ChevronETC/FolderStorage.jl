@@ -1,4 +1,4 @@
-using FolderStorage, Base.Test
+using AbstractStorage, FolderStorage, Base.Test
 
 @testset "mkpath" begin
     c = Folder("foo")
@@ -44,6 +44,13 @@ end
     write(c, "o", x)
     @test isfile(c, "o")
     @test !isfile(c, "j")
+    rm(c)
+
+    c = Folder("foo", )
+    mkpath(c)
+    nthreads = 2
+    writepieces(c, "o", x, nthreads)
+    @test isfile(c, "o")
     rm(c)
 end
 

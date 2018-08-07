@@ -95,7 +95,7 @@ function writebytes_pieces(c::Folder, o::String, data::AbstractArray{UInt8}, nth
     nothing
 end
 
-function writepieces(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
+function AbstractStorage.writepieces(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
     if T <: Number
         writebytes_pieces(c, o, reinterpret(UInt8,data), nthreads)
         return nothing
@@ -117,7 +117,7 @@ function readbytes_pieces!(c::Folder, o::String, data::AbstractArray{UInt8}, nth
     nothing
 end
 
-function readpieces!(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
+function AbstractStorage.readpieces!(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
     if T <: Number
         readbytes_pieces!(c, o, reinterpret(UInt8,data), nthreads)
         return nothing
@@ -134,7 +134,7 @@ function readpieces!(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int
     nothing
 end
 
-function readpieces(c::Folder, o::String, _T::Type{T}, n::NTuple{N}, nthreads::Int=Sys.CPU_CORES) where {T,N}
+function AbstractStorage.readpieces(c::Folder, o::String, _T::Type{T}, n::NTuple{N}, nthreads::Int=Sys.CPU_CORES) where {T,N}
     data = Array{T,N}(n)
     readpieces!(c, o, data, nthreads)
     data
@@ -148,10 +148,16 @@ end
 
 Base.filesize(c::Folder, o::AbstractString) = filesize(joinpath(c.foldername,o))
 Base.cp(src::Folder, dst::Folder) = cp(src.foldername, dst.foldername, remove_destination=true)
-Base.isfile(c::Folder, object::String) = isfile(joinpath(c.foldername,object))
 Base.copy(src::Folder) = Folder(src.foldername*"-copy-"*randstring(4))
 Base.readdir(src::Folder) = readdir(src.foldername)
 Base.isdir(src::Folder) = isdir(src.foldername)
+
+function Base.isfile(c::Folder, object::String)
+    # TODO: this feels like a kludge.  the trouble is that the file can
+    # be written to jointpath(c,object) or a set of files, one for each
+    # thread.
+    isfile(joinpath(c.foldername, object)) || isfile(string(joinpath(c.foldername, object), "-1"))
+end
 
 function Base.rm(c::Folder)
     for itry = 1:c.nretry
@@ -167,6 +173,6 @@ function Base.rm(c::Folder)
     nothing
 end
 
-export Folder, readpieces, readpieces!, writepieces
+export Folder
 
 end
