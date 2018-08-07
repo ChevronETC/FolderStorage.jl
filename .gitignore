@@ -1,0 +1,4 @@
+*.swp
+deps/usr
+*.so
+*.o
