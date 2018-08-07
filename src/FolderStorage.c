@@ -76,7 +76,7 @@ int readbytes(
         FILE *fp = fopen(filename, "rb");
         res = fseek(fp, fileoffset, SEEK_SET);
         if (res != 0) {
-            break;
+            continue;
         }
         size_t nbytes = fread(data, datasize, 1, fp);
         fclose(fp);
