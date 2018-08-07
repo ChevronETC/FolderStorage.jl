@@ -74,6 +74,9 @@ int readbytes(
     int iretry;
     for (iretry = 0; iretry < nretry; iretry++) {
         FILE *fp = fopen(filename, "rb");
+        if (fp == NULL) {
+            continue;
+        }
         res = fseek(fp, fileoffset, SEEK_SET);
         if (res != 0) {
             continue;
