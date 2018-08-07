@@ -27,7 +27,7 @@ end
 
 function Base.write(c::Folder, o::AbstractString, data::AbstractArray{T}) where {T}
     if T <: Number
-        writebytes(c, o, reinterpret(UInt8, data))
+        writebytes(c, o, reinterpret(UInt8, vec(data)))
         return nothing
     end
     io = IOBuffer()
@@ -63,7 +63,7 @@ end
 
 function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_CORES) where {T}
     if T <: Number
-        databytes = reinterpret(UInt8, data)
+        databytes = reinterpret(UInt8, vec(data))
     else
         databytes = Vector{UInt8}(filesize(c, o))
     end
@@ -97,7 +97,7 @@ end
 
 function AbstractStorage.writepieces(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
     if T <: Number
-        writebytes_pieces(c, o, reinterpret(UInt8,data), nthreads)
+        writebytes_pieces(c, o, reinterpret(UInt8,vec(data)), nthreads)
         return nothing
     end
     io = IOBuffer()
@@ -119,7 +119,7 @@ end
 
 function AbstractStorage.readpieces!(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
     if T <: Number
-        readbytes_pieces!(c, o, reinterpret(UInt8,data), nthreads)
+        readbytes_pieces!(c, o, reinterpret(UInt8,vec(data)), nthreads)
         return nothing
     end
     n = 0
