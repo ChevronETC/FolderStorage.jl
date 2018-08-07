@@ -1,0 +1,5 @@
+rm("usr/lib",recursive=true,force=true)
+mkpath("usr/lib")
+cd("../src")
+run(`make`)
+run(`make clean`)
