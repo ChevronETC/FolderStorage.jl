@@ -1,5 +1,7 @@
 module FolderStorage
 
+using Serialization
+
 const _libFolderStorage = normpath(joinpath(Base.source_path(),"../../deps/usr/lib/libFolderStorage"))
 const _haslibFolderStorage = isfile(_libFolderStorage*".so")
 
@@ -64,7 +66,7 @@ function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_THREA
     if T <: Number
         databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
     else
-        databytes = Vector{UInt8}(filesize(c, o))
+        databytes = Vector{UInt8}(undef, filesize(c, o))
     end
 
     readbytes!(c, o, databytes, nthreads)
@@ -108,7 +110,7 @@ function readbytes_pieces!(c::Folder, o::String, data::AbstractArray{UInt8}, nth
         (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
          filename, data,       length(data), nthreads, c.nretry)
     res == 0 || error("response code is $res")
-    nothing
+    data
 end
 
 function AbstractStorage.readpieces!(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_THREADS) where {T}
@@ -122,8 +124,7 @@ function AbstractStorage.readpieces!(c::Folder, o::String, data::AbstractArray{T
     for threadid = 1:nthreads
         n += filesize(string(filename,"-",threadid))
     end
-    databytes = Vector{UInt8}(n)
-    readbytes_pieces!(c, o, databytes, nthreads)
+    databytes = readbytes_pieces!(c, o, Vector{UInt8}(undef, n), nthreads)
     io = IOBuffer(databytes)
     data .= deserialize(io)
     data

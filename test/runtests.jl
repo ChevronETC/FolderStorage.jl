@@ -1,4 +1,4 @@
-using AbstractStorage, FolderStorage, Test
+using AbstractStorage, FolderStorage, Serialization, Test
 
 @testset "mkpath" begin
     c = Folder("foo")
@@ -68,7 +68,7 @@ end
     mkpath(c)
     x = rand(10)
     write(c, "o", x)
-    @test read(c.foldername*"/o", Float64, 10) ≈ x
+    @test read!(c.foldername*"/o", Vector{Float64}(undef, 10)) ≈ x
     rm(c)
 end
 
@@ -77,7 +77,7 @@ end
     mkpath(c)
     x = rand(10)
     write(c.foldername*"/o", x)
-    _x = read!(c, "o", Vector{Float64}(undef, 10), nthreads)
+    @test read!(c, "o", Vector{Float64}(undef, 10), nthreads) == x
     rm(c)
 end
 
