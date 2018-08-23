@@ -16,6 +16,9 @@ writebytes(
     int iretry;
     for (iretry = 0; iretry < nretry; iretry++) {
         FILE *fp = fopen(filename, "wb");
+        if (fp == NULL) {
+            continue;
+        }
         size_t nbytes = fwrite(data, 1, datasize, fp);
         fclose(fp);
         if (nbytes == datasize) {
