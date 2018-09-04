@@ -1,21 +1,24 @@
 using AbstractStorage, FolderStorage, Serialization, Test
 
+base = get(ENV, "FOLDERSTORAGE_TESTDIR", ".")
+@info "running tests in $base"
+
 @testset "mkpath" begin
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     @test isdir("foo")
     rm(c)
 end
 
 @testset "rm" begin
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     rm(c)
-    @test !isdir("foo")
+    @test !isdir(joinpath(base,"foo"))
 end
 
 @testset "copy" begin
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     write(c, "o", rand(10))
     d = copy(c)
@@ -27,7 +30,7 @@ end
 end
 
 @testset "deepcopy" begin
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = rand(10)
     write(c, "o", x)
@@ -38,7 +41,7 @@ end
 end
 
 @testset "isfile" begin
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = rand(10)
     write(c, "o", x)
@@ -46,7 +49,7 @@ end
     @test !isfile(c, "j")
     rm(c)
 
-    c = Folder("foo", )
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     nthreads = 2
     writepieces(c, "o", x, nthreads)
@@ -55,7 +58,7 @@ end
 end
 
 @testset "filesize" begin
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = rand(10)
     write(c, "o", x)
@@ -64,7 +67,7 @@ end
 end
 
 @testset "write, canonical" begin
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = rand(10)
     write(c, "o", x)
@@ -73,7 +76,7 @@ end
 end
 
 @testset "read!, canonical, nthreads=$nthreads" for nthreads in (1, 4)
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = rand(10)
     write(c.foldername*"/o", x)
@@ -86,7 +89,7 @@ struct Foo
     y::Float64
 end
 @testset "write, serialized" begin
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = [Foo(1,2.0)]
     write(c, "o", x)
@@ -99,7 +102,7 @@ end
 end
 
 @testset "read!, serialized, nthreads=$nthreads" for nthreads in (1,4)
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     io = open(c.foldername*"/o", "w")
     x = [Foo(1,2.0)]
@@ -111,7 +114,7 @@ end
 end
 
 @testset "read!/writepieces, canonical, nthreads=$nthreads" for nthreads in (1,4)
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = rand(10)
     writepieces(c, "o", x, nthreads)
@@ -121,7 +124,7 @@ end
 end
 
 @testset "read!/writepieces, serialized, nthreads=$nthreads" for nthreads in (1,4)
-    c = Folder("foo")
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = [Foo(1,2.0), Foo(2,3.0), Foo(3,4.0), Foo(4,5.0)]
     writepieces(c, "o", x, nthreads)
