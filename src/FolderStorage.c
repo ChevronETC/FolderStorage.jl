@@ -1,9 +1,27 @@
 #include <omp.h>
+#include <math.h>
 #include <stdio.h>
+#include <time.h>
 
 #define BUFFER_SIZE 1024
+#define EXPONENTIAL_BACKOFF_FAIL 99
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
+
+int
+exponential_backoff(int i)
+{
+    double sleeptime = 0.1*pow(2.0, (double)i);
+    double sleeptime_seconds = floor(sleeptime);
+    double sleeptime_nanoseconds = (long)((sleeptime - sleeptime_seconds) * 1000000000.0);
+
+    struct timespec ts_sleeptime, ts_remainingtime;
+
+    ts_sleeptime.tv_sec = (long)sleeptime_seconds;
+    ts_sleeptime.tv_nsec = (long)sleeptime_nanoseconds;
+
+    return nanosleep(&ts_sleeptime, &ts_remainingtime);
+}
 
 int
 writebytes(
@@ -23,6 +41,11 @@ writebytes(
         fclose(fp);
         if (nbytes == datasize) {
             res = 0;
+            break;
+        }
+        printf("Warning, bad write %zu/%zu bytes written, retrying, %d/%d.\n", nbytes, datasize, iretry, nretry);
+        if (exponential_backoff(iretry) != 0) {
+            res = EXPONENTIAL_BACKOFF_FAIL;
             break;
         }
     }
@@ -84,10 +107,15 @@ int readbytes(
         if (res != 0) {
             continue;
         }
-        size_t nbytes = fread(data, datasize, 1, fp);
+        size_t nbytes = fread(data, 1, datasize, fp);
         fclose(fp);
         if (nbytes == datasize) {
             res = 0;
+            break;
+        }
+        printf("Warning, bad read, %zu/%zu bytes read, retrying, %d/%d.\n", nbytes, datasize, iretry, nretry);
+        if (exponential_backoff(iretry) != 0) {
+            res = EXPONENTIAL_BACKOFF_FAIL;
             break;
         }
     }
