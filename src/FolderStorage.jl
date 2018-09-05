@@ -1,11 +1,17 @@
-__precompile__(true)
-
 module FolderStorage
+
+using Serialization
 
 const _libFolderStorage = normpath(joinpath(Base.source_path(),"../../deps/usr/lib/libFolderStorage"))
 const _haslibFolderStorage = isfile(_libFolderStorage*".so")
 
-using AbstractStorage, Lumberjack
+function __init__()
+    if !_haslibFolderStorage
+        @warn "FolderStorage is not built, we will not use openmp code paths."
+    end
+end
+
+using AbstractStorage, Random
 
 struct Folder <: Container
     foldername::String
@@ -18,16 +24,17 @@ Base.mkpath(c::Folder) = mkpath(c.foldername)
 function writebytes(c::Folder, o::AbstractString, data::AbstractArray{UInt8})
     filename = joinpath(c.foldername, o)
     for i = 1:c.nretry
-        write(filename, data) == sizeof(data) && return nothing
-        Lumberjack.warn("problem writing to $c/$o, attempt $i.")
+        write(filename, data) == length(data) && return nothing
+        @warn "problem writing to $c/$o, attempt $i."
         sleep(0.1*2^(i-1))
     end
-    Lumberjack.error("problem writing to $c/$o in 10 attempts.")
+    error("problem writing to $c/$o in 10 attempts.")
 end
 
 function Base.write(c::Folder, o::AbstractString, data::AbstractArray{T}) where {T}
     if T <: Number
-        writebytes(c, o, reinterpret(UInt8, vec(data)))
+        databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), sizeof(data))
+        writebytes(c, o, databytes)
         return nothing
     end
     io = IOBuffer()
@@ -41,63 +48,84 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
     nthreads = clamp(nthreads, 1, length(data))
     filename = joinpath(c.foldername, o)
     if _haslibFolderStorage
-        r = ccall((:readbytes_threaded_single_file, _libFolderStorage), Int,
-            (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
-             filename, data,       length(data), nthreads, c.nretry)
-        r == 0 || Lumberjack.error("problem reading from $c/$o.")
-        return nothing
+        function _readbytes!(c, o, data, nthreads)
+            ccall((:readbytes_threaded_single_file, _libFolderStorage), Int,
+                (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
+                 filename, data,       length(data), nthreads, c.nretry)
+        end
+        r = _readbytes!(c, o, data, nthreads)
+        r == 0 || error("problem reading from $c/$o.")
+        return data
     end
 
     for i = 1:c.nretry
         try
             read!(joinpath(c.foldername,o), data)
-            return nothing
+            return data
         catch
-            Lumberjack.warn("problem reading from $c/$o, attempt $i.")
+            @warn "problem reading from $c/$o, attempt $i."
             sleep(0.1*2^(i-1))
         end
     end
-    Lumberjack.error("problem reading from $c/$o in 10 attempts.")
-    nothing
+    error("problem reading from $c/$o in 10 attempts.")
+    data
 end
 
-function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_CORES) where {T}
+function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_THREADS) where {T}
     if T <: Number
-        databytes = reinterpret(UInt8, vec(data))
+        databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
     else
-        databytes = Vector{UInt8}(filesize(c, o))
+        databytes = Vector{UInt8}(undef, filesize(c, o))
     end
 
     readbytes!(c, o, databytes, nthreads)
 
     if T <: Number
-        return nothing
+        return data
     end
 
     io = IOBuffer(databytes)
     data .= deserialize(io)
-    nothing
-end
-
-function Base.read(c::Folder, o::String, _T::Type{T}, n::NTuple{N}, nthreads=Sys.CPU_CORES)  where {T,N}
-    data = Array{T,N}(n)
-    read!(c, o, data, nthreads)
-    return data
+    data
 end
 
 function writebytes_pieces(c::Folder, o::String, data::AbstractArray{UInt8}, nthreads)
     nthreads = clamp(nthreads, 1, length(data))
-    filename = joinpath(c.foldername, o)
-    res = ccall((:writebytes_threaded, _libFolderStorage), Int,
-        (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
-         filename, data,       length(data), nthreads, c.nretry)
-    res == 0 || Lumberjack.error("response code is $res")
+
+    if _haslibFolderStorage
+        filename = joinpath(c.foldername, o)
+        function _writebytes_pieces(c, o, data, nthreads)
+            ccall((:writebytes_threaded, _libFolderStorage), Int,
+                (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
+                 filename, data,       length(data), nthreads, c.nretry)
+        end
+        r = _writebytes_pieces(c, o, data, nthreads)
+        r == 0 || error("response code is $r")
+        return nothing
+    end
+
+    thread_datasize, thread_dataremainder = divrem(length(data), nthreads)
+    for threadid = 1:nthreads
+        thread_firstbyte = (threadid - 1)*thread_datasize + 1
+        _thread_datasize = thread_datasize
+        if threadid <= thread_dataremainder
+            thread_firstbyte += threadid - 1
+            _thread_datasize += 1
+        else
+            thread_firstbyte += thread_dataremainder
+        end
+        thread_lastbyte = thread_firstbyte + _thread_datasize - 1
+
+        thread_objectname = string(o, "-", threadid)
+        writebytes(c, thread_objectname, data[thread_firstbyte:thread_lastbyte])
+    end
     nothing
 end
 
-function AbstractStorage.writepieces(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
+function AbstractStorage.writepieces(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_THREADS) where {T}
     if T <: Number
-        writebytes_pieces(c, o, reinterpret(UInt8,vec(data)), nthreads)
+        databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
+        writebytes_pieces(c, o, databytes, nthreads)
         return nothing
     end
     io = IOBuffer()
@@ -108,35 +136,52 @@ function AbstractStorage.writepieces(c::Folder, o::String, data::AbstractArray{T
 end
 
 function readbytes_pieces!(c::Folder, o::String, data::AbstractArray{UInt8}, nthreads::Int)
-    filename = joinpath(c.foldername, o)
     nthreads = clamp(nthreads, 1, length(data))
-    res = ccall((:readbytes_threaded_many_files, _libFolderStorage), Int,
-        (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
-         filename, data,       length(data), nthreads, c.nretry)
-    res == 0 || Lumberjack.error("response code is $res")
-    nothing
+
+    if _haslibFolderStorage
+        filename = joinpath(c.foldername, o)
+        function _readbytes_pieces!(c, o, data, nthreads)
+            ccall((:readbytes_threaded_many_files, _libFolderStorage), Int,
+                (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
+                 filename, data,       length(data), nthreads, c.nretry)
+        end
+        r = _readbytes_pieces!(c, o, data, nthreads)
+        r == 0 || error("response code is $r")
+        return data
+    end
+
+    thread_datasize, thread_dataremainder = divrem(length(data), nthreads)
+    for threadid = 1:nthreads
+        thread_firstbyte = (threadid - 1)*thread_datasize + 1
+        _thread_datasize = thread_datasize
+        if threadid <= thread_dataremainder
+            thread_firstbyte += threadid - 1
+            _thread_datasize += 1
+        else
+            thread_firstbyte += thread_dataremainder
+        end
+        thread_lastbyte = thread_firstbyte + _thread_datasize - 1
+
+        thread_objectname = string(o, "-", threadid)
+        data[thread_firstbyte:thread_lastbyte] .= readbytes!(c, thread_objectname, Vector{UInt8}(undef, _thread_datasize), nthreads)
+    end
+    return data
 end
 
-function AbstractStorage.readpieces!(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_CORES) where {T}
+function AbstractStorage.readpieces!(c::Folder, o::String, data::AbstractArray{T}, nthreads::Int=Sys.CPU_THREADS) where {T}
     if T <: Number
-        readbytes_pieces!(c, o, reinterpret(UInt8,vec(data)), nthreads)
-        return nothing
+        databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
+        readbytes_pieces!(c, o, databytes, nthreads)
+        return data
     end
     n = 0
     filename = joinpath(c.foldername, o)
     for threadid = 1:nthreads
         n += filesize(string(filename,"-",threadid))
     end
-    databytes = Vector{UInt8}(n)
-    readbytes_pieces!(c, o, databytes, nthreads)
+    databytes = readbytes_pieces!(c, o, Vector{UInt8}(undef, n), nthreads)
     io = IOBuffer(databytes)
     data .= deserialize(io)
-    nothing
-end
-
-function AbstractStorage.readpieces(c::Folder, o::String, _T::Type{T}, n::NTuple{N}, nthreads::Int=Sys.CPU_CORES) where {T,N}
-    data = Array{T,N}(n)
-    readpieces!(c, o, data, nthreads)
     data
 end
 
@@ -147,7 +192,7 @@ function Base.deepcopy(src::Folder)
 end
 
 Base.filesize(c::Folder, o::AbstractString) = filesize(joinpath(c.foldername,o))
-Base.cp(src::Folder, dst::Folder) = cp(src.foldername, dst.foldername, remove_destination=true)
+Base.cp(src::Folder, dst::Folder) = cp(src.foldername, dst.foldername, force=true)
 Base.copy(src::Folder) = Folder(src.foldername*"-copy-"*randstring(4))
 Base.readdir(src::Folder) = readdir(src.foldername)
 Base.isdir(src::Folder) = isdir(src.foldername)
@@ -165,7 +210,7 @@ function Base.rm(c::Folder)
             rm(c.foldername, recursive=true, force=true)
             break
         catch
-            Lumberjack.warn("unable to remove $(c.foldername), trial $itry")
+            @warn "unable to remove $(c.foldername), trial $itry"
             itry == c.nretry && rethrow()
         end
         sleep(0.1*2^(itry-1))
