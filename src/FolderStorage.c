@@ -35,15 +35,16 @@ writebytes(
     for (iretry = 0; iretry < nretry; iretry++) {
         FILE *fp = fopen(filename, "wb");
         if (fp == NULL) {
-            continue;
+            printf("Warning, unable to open %s for writing (attempt %d), line %d in %s.\n", filename, iretry, __LINE__, __FILE__);
+        } else {
+            size_t nbytes = fwrite(data, 1, datasize, fp);
+            fclose(fp);
+            if (nbytes == datasize) {
+                res = 0;
+                break;
+            }
+            printf("Warning, bad write %zu/%zu bytes written, retrying, %d/%d, line %d in %s.\n", nbytes, datasize, iretry, nretry, __LINE__, __FILE__);
         }
-        size_t nbytes = fwrite(data, 1, datasize, fp);
-        fclose(fp);
-        if (nbytes == datasize) {
-            res = 0;
-            break;
-        }
-        printf("Warning, bad write %zu/%zu bytes written, retrying, %d/%d.\n", nbytes, datasize, iretry, nretry);
         if (exponential_backoff(iretry) != 0) {
             res = EXPONENTIAL_BACKOFF_FAIL;
             break;
@@ -101,19 +102,19 @@ int readbytes(
     for (iretry = 0; iretry < nretry; iretry++) {
         FILE *fp = fopen(filename, "rb");
         if (fp == NULL) {
-            continue;
+            printf("Warning, unable to open %s for reading (attempt %d), line %d in %s.\n", filename, iretry, __LINE__, __FILE__);
+        } else {
+            size_t nbytes = 0L;
+            if (fseek(fp, fileoffset, SEEK_SET) == 0) {
+                nbytes = fread(data, 1, datasize, fp);
+                fclose(fp);
+                if (nbytes == datasize) {
+                    res = 0;
+                    break;
+                }
+            }
+            printf("Warning, bad read, %zu/%zu bytes read, retrying, %d/%d.\n", nbytes, datasize, iretry, nretry);
         }
-        res = fseek(fp, fileoffset, SEEK_SET);
-        if (res != 0) {
-            continue;
-        }
-        size_t nbytes = fread(data, 1, datasize, fp);
-        fclose(fp);
-        if (nbytes == datasize) {
-            res = 0;
-            break;
-        }
-        printf("Warning, bad read, %zu/%zu bytes read, retrying, %d/%d.\n", nbytes, datasize, iretry, nretry);
         if (exponential_backoff(iretry) != 0) {
             res = EXPONENTIAL_BACKOFF_FAIL;
             break;
