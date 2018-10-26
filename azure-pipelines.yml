@@ -11,7 +11,9 @@ steps:
     cp -r ${BUILD_SOURCESDIRECTORY} /home/vsts/.julia/dev/FolderStorage
     
     cd ${BUILD_SOURCESDIRECTORY}
-    git submodule add -f ../../ETC-ESD-AbstractStorage.jl/_git/AbstractStorage.jl /home/vsts/.julia/dev/AbstractStorage
+    git submodule add -f ../../ETC-ESD-AbstractStorage.jl/_git/AbstractStorage.jl AbstractStorage
+    ls
+    cp -r AbstractStorage /home/vsts/.julia/dev/AbstractStorage
     cd
     ls /home/vsts/.julia/dev/
     
