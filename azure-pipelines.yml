@@ -10,7 +10,9 @@ steps:
     mkdir -p /home/vsts/.julia/dev
     cp -r ${BUILD_SOURCESDIRECTORY} /home/vsts/.julia/dev/FolderStorage
     
-    git clone https://chevron.visualstudio.com/ETC-ESD-AbstractStorage.jl/_git/AbstractStorage.jl /home/vsts/.julia/dev/AbstractStorage
+    cd ${BUILD_SOURCESDIRECTORY}
+    git submodule add ../../ETC-ESD-AbstractStorage.jl/_git/AbstractStorage.jl /home/vsts/.julia/dev/AbstractStorage
+    cd
     
     /opt/julia/bin/julia -e 'using Pkg; pkg"add Random Serialization'
     /opt/julia/bin/juila -e 'using Pkg; pkg"develop --local /home/vsts/.julia/dev/AbstractStorage"'
