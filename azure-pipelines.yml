@@ -1,0 +1,28 @@
+pool:
+  vmImage: 'Ubuntu 16.04'
+
+steps:
+- script: |
+    sudo wget https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.0-linux-x86_64.tar.gz
+    sudo mkdir -p /opt/julia
+    sudo tar --strip-components=1 -xzvf julia-1.0.0-linux-x86_64.tar.gz -C /opt/julia
+    cd
+    mkdir -p /home/vsts/.julia/dev
+    cp -r ${BUILD_SOURCESDIRECTORY} /home/vsts/.julia/dev/FolderStorage
+    
+    cd ${BUILD_SOURCESDIRECTORY}
+    git submodule add ../../ETC-ESD-AbstractStorage.jl/_git/AbstractStorage.jl AbstractStorage
+    ls
+    cp -r AbstractStorage /home/vsts/.julia/dev/AbstractStorage
+    cd
+    ls /home/vsts/.julia/dev/
+    
+    /opt/julia/bin/julia -e 'using Pkg; pkg"add Random Serialization"'
+    /opt/julia/bin/julia -e 'using Pkg; pkg"develop --local /home/vsts/.julia/dev/AbstractStorage"'
+    /opt/julia/bin/julia -e 'using Pkg; pkg"develop --local /home/vsts/.julia/dev/FolderStorage"'
+    /opt/julia/bin/julia -e 'using Pkg; pkg"precompile"'
+  displayName: 'Install system'
+  
+- script: |
+    /opt/julia/bin/julia -e 'using Pkg; pkg"test FolderStorage"'
+  displayName: 'Run unit-tests'
