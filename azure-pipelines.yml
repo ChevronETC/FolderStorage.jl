@@ -1,5 +1,5 @@
-queue:
-  name: 'Google Cloud'
+pool:
+  vmImage: 'Ubuntu 16.04'
 
 variables:
   - group: FolderStorage
