@@ -1,5 +1,5 @@
-pool:
-  vmImage: 'Google Cloud'
+queue:
+  name: 'Google Cloud'
 
 variables:
   - group: FolderStorage
