@@ -36,7 +36,7 @@ steps:
     /opt/julia/bin/julia -e 'using Pkg; pkg"test FolderStorage"'
   displayName: 'Run unit-tests'
 
--task: DownloadSecureFile@1
+- task: DownloadSecureFile@1
   inputs:
     secureFile: account.json
 
