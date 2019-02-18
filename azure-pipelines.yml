@@ -45,4 +45,4 @@ steps:
     packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
-  displayname: 'Deploy'
+  displayName: 'Deploy'
