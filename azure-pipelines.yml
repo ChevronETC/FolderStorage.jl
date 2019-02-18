@@ -41,7 +41,7 @@ steps:
     secureFile: account.json
 
 - script: |
-    echo "echo TEMP_DIRECTORY"
+    echo "echo TEMP_DIRECTORY xx"
     echo "${TEMP_DIRECTORY}"
     echo "env"
     env
