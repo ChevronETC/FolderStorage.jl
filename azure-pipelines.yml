@@ -42,7 +42,7 @@ steps:
     cd /tmp/jcloud
     echo "ls"
     ls
-    packer build --force jcloud.json
+    /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
   displayName: 'Deploy'
