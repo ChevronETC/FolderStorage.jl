@@ -10,6 +10,12 @@ steps:
     sudo mkdir -p /opt/julia
     sudo tar --strip-components=1 -xzvf julia-1.1.0-linux-x86_64.tar.gz -C /opt/julia
 
+    sudo wget https://releases.hashicorp.com/packer/1.3.4/packer_1.3.4_linux_amd64.zip
+    sudo mkdir -p /opt/packer
+    sudo unzip packer_1.3.4_linux_amd64.zip
+    echo "ls /opt/packer"
+    ls /opt/packer
+
     mkdir -p $(HOME)/.julia/dev
 
     cp -r ${BUILD_SOURCESDIRECTORY} $(HOME)/.julia/dev/FolderStorage
@@ -25,7 +31,18 @@ steps:
   env:
     MYPAT: $(PAT)
   displayName: 'Install system'
-  
+
 - script: |
     /opt/julia/bin/julia -e 'using Pkg; pkg"test FolderStorage"'
   displayName: 'Run unit-tests'
+
+- script: |
+    AUTH=$(echo -n ":$MYPAT" | openssl base64 | tr -d '\n')
+    git -c http.https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud.extraheader="AUTHORIZATION: basic $AUTH" clone https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud /tmp/jcloud
+    cd /tmp/jcloud
+    echo "ls"
+    ls
+    packer build --force jcloud.json
+  env:
+    MYPAT: $(PAT)
+  displayname: 'Deploy'
