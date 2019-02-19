@@ -1,3 +1,8 @@
+trigger:
+  branches:
+    include:
+      - master
+
 pool:
   vmImage: 'Ubuntu 16.04'
 
@@ -41,8 +46,4 @@ steps:
     /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
-  trigger:
-    branches:
-      include:
-        - master
   displayName: 'Deploy to Google Cloud Platform'
