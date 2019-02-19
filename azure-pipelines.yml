@@ -4,6 +4,7 @@ jobs:
       branches:
         include:
           - master
+          - pipelines-with-packer
 
     pool:
       vmImage: 'Ubuntu 16.04'
