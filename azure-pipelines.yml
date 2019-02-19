@@ -47,7 +47,7 @@ steps:
     echo "ls"
     ls
     echo "ls ./ssh"
-    ls .ssh/
+    ls ./ssh/
     /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
