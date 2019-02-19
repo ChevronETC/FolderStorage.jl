@@ -5,6 +5,10 @@ variables:
   - group: FolderStorage
 
 steps:
+- task: DownloadSecureFile@1
+    inputs:
+      secureFile: account.json
+
 - script: |
     sudo wget https://julialang-s3.julialang.org/bin/linux/x64/1.1/julia-1.1.0-linux-x86_64.tar.gz
     sudo mkdir -p /opt/julia
@@ -13,8 +17,6 @@ steps:
     sudo wget https://releases.hashicorp.com/packer/1.3.4/packer_1.3.4_linux_amd64.zip
     sudo mkdir -p /opt/packer
     sudo unzip packer_1.3.4_linux_amd64.zip -d /opt/packer
-    echo "ls /opt/packer"
-    ls /opt/packer
 
     mkdir -p $(HOME)/.julia/dev
 
@@ -36,10 +38,6 @@ steps:
     /opt/julia/bin/julia -e 'using Pkg; pkg"test FolderStorage"'
   displayName: 'Run unit-tests'
 
-- task: DownloadSecureFile@1
-  inputs:
-    secureFile: account.json
-
 - script: |
     echo "echo TEMP_DIRECTORY xx"
     echo "${TEMP_DIRECTORY}"
@@ -50,7 +48,7 @@ steps:
     cd /tmp/jcloud
     cp ${TEMP_DIRECTORY}/account.json .
     ls
-    echo "ls"
+    echo "ls "
     ls
     /opt/packer/packer build --force jcloud.json
   env:
