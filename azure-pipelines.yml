@@ -1,3 +1,5 @@
+jobs:
+- job: Foo
 trigger:
   branches:
     include:
