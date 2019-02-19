@@ -4,11 +4,6 @@ pool:
 variables:
   - group: FolderStorage
 
-steps:
-- task: DownloadSecureFile@1
-    inputs:
-      secureFile: account.json
-
 - script: |
     sudo wget https://julialang-s3.julialang.org/bin/linux/x64/1.1/julia-1.1.0-linux-x86_64.tar.gz
     sudo mkdir -p /opt/julia
@@ -46,7 +41,6 @@ steps:
     AUTH=$(echo -n ":$MYPAT" | openssl base64 | tr -d '\n')
     git -c http.https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud.extraheader="AUTHORIZATION: basic $AUTH" clone https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud /tmp/jcloud
     cd /tmp/jcloud
-    cp ${TEMP_DIRECTORY}/account.json .
     ls
     echo "ls "
     ls
