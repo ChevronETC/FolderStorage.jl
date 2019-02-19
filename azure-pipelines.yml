@@ -39,6 +39,9 @@ steps:
     secureFile: account.json
 
 - script: |
+    echo "(Agent.TempDirectory)"
+    echo $(Agent.TempDirectory)
+    ls $(Agent.TempDirectory)
     AUTH=$(echo -n ":$MYPAT" | openssl base64 | tr -d '\n')
     git -c http.https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud.extraheader="AUTHORIZATION: basic $AUTH" clone https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud /tmp/jcloud
     cd /tmp/jcloud
