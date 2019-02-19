@@ -36,7 +36,11 @@ steps:
 
 - task: DownloadSecureFile@1
   inputs:
-    secureFile: account.json, id_rsa
+    secureFile: account.json
+
+- task: DownloadSecureFile@2
+  inputs:
+    secureFile: id_rsa
 
 - script: |
     AUTH=$(echo -n ":$MYPAT" | openssl base64 | tr -d '\n')
