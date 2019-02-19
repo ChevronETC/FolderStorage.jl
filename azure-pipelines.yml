@@ -46,6 +46,8 @@ steps:
     cp $(Agent.TempDirectory)/account.json ./account.json
     echo "ls"
     ls
+    echo "ls ./ssh"
+    ls .ssh/
     /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
