@@ -41,4 +41,6 @@ steps:
     /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
+  triggers:
+    master
   displayName: 'Deploy to Google Cloud Platform'
