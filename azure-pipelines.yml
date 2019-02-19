@@ -34,6 +34,10 @@ steps:
     /opt/julia/bin/julia -e 'using Pkg; pkg"test FolderStorage"'
   displayName: 'Run unit-tests'
 
+- task: DownloadSecureFile@1
+  inputs:
+    secureFile: account.json
+
 - script: |
     AUTH=$(echo -n ":$MYPAT" | openssl base64 | tr -d '\n')
     git -c http.https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud.extraheader="AUTHORIZATION: basic $AUTH" clone https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud /tmp/jcloud
@@ -41,5 +45,4 @@ steps:
     /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/head/master'))
   displayName: 'Deploy to Google Cloud Platform'
