@@ -39,6 +39,7 @@ steps:
     secureFile: account.json
 
 - task: DownloadSecureFile@2
+  inputs:
     secureFile: id_rsa
 
 - script: |
