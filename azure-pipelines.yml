@@ -37,7 +37,8 @@ steps:
 - script: |
     AUTH=$(echo -n ":$MYPAT" | openssl base64 | tr -d '\n')
     git -c http.https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud.extraheader="AUTHORIZATION: basic $AUTH" clone https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud /tmp/jcloud
-    /opt/packer/packer build --force /tmp/jcloud/jcloud.json
+    cd /tmp/jcloud
+    /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
   displayName: 'Deploy to Google Cloud Platform'
