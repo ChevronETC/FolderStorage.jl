@@ -39,13 +39,13 @@ steps:
     secureFile: account.json
 
 - script: |
-    mkdir ssh
-    cp $(Agent.TempDirectory)/account.json ./account.json
-    cp $(Agent.TempDirectory)/id_rsa ./ssh/id_rsa
-    cp $(Agent.TempDirectory)/id_rsa.pub ./ssh/is_rsa.pub
     AUTH=$(echo -n ":$MYPAT" | openssl base64 | tr -d '\n')
     git -c http.https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud.extraheader="AUTHORIZATION: basic $AUTH" clone https://chevron.visualstudio.com/ETC-ESD-jcloud/_git/jcloud /tmp/jcloud
     cd /tmp/jcloud
+    cp $(Agent.TempDirectory)/id_rsa ./ssh/id_rsa
+    cp $(Agent.TempDirectory)/account.json ./account.json
+    echo "ls"
+    ls
     /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
