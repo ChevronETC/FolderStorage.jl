@@ -54,5 +54,5 @@ steps:
     /opt/packer/packer build --force jcloud.json
   env:
     MYPAT: $(PAT)
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/head/master'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   displayName: 'Deploy to Google Cloud Platform'
