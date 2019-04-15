@@ -4,7 +4,7 @@ base = get(ENV, "FOLDERSTORAGE_TESTDIR", ".")
 @info "running tests in $base"
 
 @testset "mkpath" begin
-    c = Folder(joinpath(base,"foo"))
+    Folder(joinpath(base,"foo"))
     mkpath(c)
     @test isdir("foo")
     rm(c)
@@ -47,13 +47,6 @@ end
     write(c, "o", x)
     @test isfile(c, "o")
     @test !isfile(c, "j")
-    rm(c)
-
-    c = Folder(joinpath(base,"foo"))
-    mkpath(c)
-    nthreads = 2
-    writepieces(c, "o", x, nthreads)
-    @test isfile(c, "o")
     rm(c)
 end
 
@@ -111,27 +104,4 @@ end
     _x = read!(c, "o", Vector{Foo}(undef, 1), nthreads)
     @test _x[1].x == x[1].x
     @test _x[1].y ≈ x[1].y
-end
-
-@testset "read!/writepieces, canonical, nthreads=$nthreads" for nthreads in (1,4)
-    c = Folder(joinpath(base,"foo"))
-    mkpath(c)
-    x = rand(10)
-    writepieces(c, "o", x, nthreads)
-    _x = readpieces!(c, "o", Vector{Float64}(undef, 10), nthreads)
-    @test x ≈ _x
-    rm(c)
-end
-
-@testset "read!/writepieces, serialized, nthreads=$nthreads" for nthreads in (1,4)
-    c = Folder(joinpath(base,"foo"))
-    mkpath(c)
-    x = [Foo(1,2.0), Foo(2,3.0), Foo(3,4.0), Foo(4,5.0)]
-    writepieces(c, "o", x, nthreads)
-    _x = readpieces!(c, "o", Vector{Foo}(undef, 4), nthreads)
-    for i = 1:4
-        @test x[i].x == _x[i].x
-        @test x[i].y ≈ _x[i].y
-    end
-    rm(c)
 end
