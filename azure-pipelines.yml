@@ -6,16 +6,16 @@ variables:
 
 steps:
 - task: DownloadSecureFile@1
-    inputs:
-      secureFile: id_rsa
+  inputs:
+    secureFile: id_rsa
 
 - task: DownloadSecureFile@1
-    inputs:
-      secureFile: id_rsa.pub
+  inputs:
+    secureFile: id_rsa.pub
 
 - task: DownloadSecureFile@1
-    inputs:
-      secureFile: known_hosts
+  inputs:
+    secureFile: known_hosts
 
 - script: |
     mkdir ~/.ssh
