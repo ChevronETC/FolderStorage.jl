@@ -4,7 +4,7 @@ base = get(ENV, "FOLDERSTORAGE_TESTDIR", ".")
 @info "running tests in $base"
 
 @testset "mkpath" begin
-    Folder(joinpath(base,"foo"))
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     @test isdir("foo")
     rm(c)
