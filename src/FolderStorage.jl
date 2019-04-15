@@ -69,7 +69,7 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
     data
 end
 
-function Base.read!(c::Folder, o::String, data::Array{T}) where {T<:Number}
+function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_THREADS) where {T<:Number}
     databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
     readbytes!(c, o, databytes, nthreads)
     data
