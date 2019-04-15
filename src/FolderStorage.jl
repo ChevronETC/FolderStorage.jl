@@ -1,6 +1,6 @@
 module FolderStorage
 
-using Serialization
+using AbstractStorage, Random, Serialization
 
 const _libFolderStorage = normpath(joinpath(Base.source_path(),"../../deps/usr/lib/libFolderStorage"))
 const _haslibFolderStorage = isfile(_libFolderStorage*".so")
@@ -10,8 +10,6 @@ function __init__()
         @warn "FolderStorage is not built, we will not use openmp code paths."
     end
 end
-
-using AbstractStorage, Random
 
 struct Folder <: Container
     foldername::String
