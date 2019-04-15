@@ -49,7 +49,7 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
     filename = joinpath(c.foldername, o)
     if _haslibFolderStorage
         function _readbytes!(c, o, data, nthreads)
-            ccall((:readbytes_threaded_single_file, _libFolderStorage), Int,
+            ccall((:readbytes_threaded, _libFolderStorage), Int,
                 (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
                  filename, data,       length(data), nthreads, c.nretry)
         end
@@ -71,19 +71,15 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
     data
 end
 
-function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_THREADS) where {T}
-    if T <: Number
-        databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
-    else
-        databytes = Vector{UInt8}(undef, filesize(c, o))
-    end
-
+function Base.read!(c::Folder, o::String, data::Array{T}) where {T<:Number}
+    databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
     readbytes!(c, o, databytes, nthreads)
+    data
+end
 
-    if T <: Number
-        return data
-    end
-
+function Base.read!(c::Folder, o::String, data::Array{T}, nthreads=Sys.CPU_THREADS) where {T}
+    databytes = Vector{UInt8}(undef, filesize(c, o))
+    readbytes!(c, o, databytes, nthreads)
     io = IOBuffer(databytes)
     data .= deserialize(io)
     data
