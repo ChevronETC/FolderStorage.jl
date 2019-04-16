@@ -105,3 +105,19 @@ end
     @test _x[1].x == x[1].x
     @test _x[1].y ≈ x[1].y
 end
+
+@testset "read/write string" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    write(c, "bar", "hello")
+    @test read(c, "bar", String) == "hello"
+    rm(c)
+end
+
+@testset "path escaping" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    write(c, "bar/baz", "hello")
+    @test read(joinpath(c.foldername,"bar-baz"), String) == "hello"
+    rm(c)
+end
