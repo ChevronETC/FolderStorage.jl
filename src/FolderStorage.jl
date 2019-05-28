@@ -2,8 +2,10 @@ module FolderStorage
 
 using AbstractStorage, Random, Serialization
 
-const _libFolderStorage = normpath(joinpath(Base.source_path(),"../../deps/usr/lib/libFolderStorage"))
-const _haslibFolderStorage = isfile(_libFolderStorage*".so")
+libname(basename) = Sys.iswindows() ? basename*".dll" : basename*".so"
+
+const _libFolderStorage = normpath(joinpath(Base.source_path(),"..","..","deps","usr","lib","libFolderStorage"))
+const _haslibFolderStorage = isfile(libname(_libFolderStorage))
 
 function __init__()
     if !_haslibFolderStorage
@@ -13,16 +15,17 @@ end
 
 struct Folder <: Container
     foldername::String
+    nthreads::Int
     nretry::Int
 end
-Folder(foldername; nretry=10) = Folder(foldername, nretry)
-
-escapepath(o::AbstractString) = join(split(o, '/'), '-')
+Folder(foldername; nthreads=Sys.CPU_THREADS, nretry=10) = Folder(foldername, nthreads, nretry)
 
 Base.mkpath(c::Folder) = mkpath(c.foldername)
+Base.mkpath(c::Folder, o::AbstractString) = mkpath(joinpath(c.foldername, splitpath(o)[1:end-1]...))
 
 function writebytes(c::Folder, o::AbstractString, data::AbstractArray{UInt8})
-    filename = joinpath(c.foldername, escapepath(o))
+    mkpath(c, o)
+    filename = joinpath(c.foldername, o)
     for i = 1:c.nretry
         write(filename, data) == length(data) && return nothing
         @warn "problem writing to $c/$o, attempt $i."
@@ -31,7 +34,10 @@ function writebytes(c::Folder, o::AbstractString, data::AbstractArray{UInt8})
     error("problem writing to $c/$o in 10 attempts.")
 end
 
-Base.write(c::Folder, o::AbstractString, data::AbstractString) = write(joinpath(c.foldername, escapepath(o)), data)
+function Base.write(c::Folder, o::AbstractString, data::AbstractString)
+    mkpath(c, o)
+    write(joinpath(c.foldername, o), data)
+end
 
 function Base.write(c::Folder, o::AbstractString, data::DenseArray{T}) where {T<:Number}
     databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), sizeof(data), own=false)
@@ -45,9 +51,9 @@ function Base.write(c::Folder, o::AbstractString, data::DenseArray)
     writebytes(c, o, databytes)
 end
 
-function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
-    nthreads = clamp(nthreads, 1, length(data))
-    filename = joinpath(c.foldername, escapepath(o))
+function readbytes!(c::Folder, o::String, data::Vector{UInt8})
+    nthreads = clamp(c.nthreads, 1, length(data))
+    filename = joinpath(c.foldername, o)
     if _haslibFolderStorage
         function _readbytes!(c, o, data, nthreads)
             ccall((:readbytes_threaded, _libFolderStorage), Int,
@@ -61,7 +67,7 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
 
     for i = 1:c.nretry
         try
-            read!(joinpath(c.foldername,o), data)
+            read!(joinpath(c.foldername, o), data)
             return data
         catch
             @warn "problem reading from $c/$o, attempt $i."
@@ -72,23 +78,23 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8}, nthreads)
     data
 end
 
-Base.read(c::Folder, o::AbstractString, ::Type{String}) = read(joinpath(c.foldername, escapepath(o)), String)
+Base.read(c::Folder, o::AbstractString, ::Type{String}) = read(joinpath(c.foldername, o), String)
 
-function Base.read(c::Folder, o::AbstractString, nthreads=Sys.CPU_THREADS)
-    databytes = readbytes!(c, o, Vector{UInt8}(undef, filesize(c, o)), nthreads)
+function Base.read(c::Folder, o::AbstractString)
+    databytes = readbytes!(c, o, Vector{UInt8}(undef, filesize(c, o)))
     io = IOBuffer(databytes)
     deserialize(io)
 end
 
-function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}, nthreads=Sys.CPU_THREADS) where {T<:Number}
+function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}) where {T<:Number}
     databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
-    readbytes!(c, o, databytes, nthreads)
+    readbytes!(c, o, databytes)
     data
 end
 
-function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}, nthreads=Sys.CPU_THREADS) where {T}
+function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}) where {T}
     databytes = Vector{UInt8}(undef, filesize(c, o))
-    readbytes!(c, o, databytes, nthreads)
+    readbytes!(c, o, databytes)
     io = IOBuffer(databytes)
     data .= deserialize(io)
     data
@@ -100,7 +106,7 @@ function Base.deepcopy(src::Folder)
     dst
 end
 
-Base.filesize(c::Folder, o::AbstractString) = filesize(joinpath(c.foldername,escapepath(o)))
+Base.filesize(c::Folder, o::AbstractString) = filesize(joinpath(c.foldername, o))
 Base.cp(src::Folder, dst::Folder) = cp(src.foldername, dst.foldername, force=true)
 Base.copy(src::Folder) = Folder(src.foldername*"-copy-"*randstring(4))
 Base.readdir(src::Folder) = readdir(src.foldername)
@@ -110,7 +116,7 @@ function Base.isfile(c::Folder, object::AbstractString)
     # TODO: this feels like a kludge.  the trouble is that the file can
     # be written to jointpath(c,object) or a set of files, one for each
     # thread.
-    isfile(joinpath(c.foldername, escapepath(object))) || isfile(string(joinpath(c.foldername, escapepath(object)), "-1"))
+    isfile(joinpath(c.foldername, object)) || isfile(string(joinpath(c.foldername, object), "-1"))
 end
 
 function Base.rm(c::Folder)

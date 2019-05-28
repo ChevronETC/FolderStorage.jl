@@ -69,11 +69,11 @@ end
 end
 
 @testset "read!, canonical, nthreads=$nthreads" for nthreads in (1, 4)
-    c = Folder(joinpath(base,"foo"))
+    c = Folder(joinpath(base,"foo"), nthreads=nthreads)
     mkpath(c)
     x = rand(10)
     write(c.foldername*"/o", x)
-    @test read!(c, "o", Vector{Float64}(undef, 10), nthreads) == x
+    @test read!(c, "o", Vector{Float64}(undef, 10)) == x
     rm(c)
 end
 
@@ -95,13 +95,13 @@ end
 end
 
 @testset "read!, serialized, nthreads=$nthreads" for nthreads in (1,4)
-    c = Folder(joinpath(base,"foo"))
+    c = Folder(joinpath(base,"foo"), nthreads=nthreads)
     mkpath(c)
     io = open(c.foldername*"/o", "w")
     x = [Foo(1,2.0)]
     serialize(io, x)
     close(io)
-    _x = read!(c, "o", Vector{Foo}(undef, 1), nthreads)
+    _x = read!(c, "o", Vector{Foo}(undef, 1))
     @test _x[1].x == x[1].x
     @test _x[1].y ≈ x[1].y
 end
@@ -114,10 +114,10 @@ end
     rm(c)
 end
 
-@testset "path escaping" begin
+@testset "implicit pathing" begin
     c = Folder(joinpath(base,"foo"))
     mkpath(c)
     write(c, "bar/baz", "hello")
-    @test read(joinpath(c.foldername,"bar-baz"), String) == "hello"
+    @test read(joinpath(c.foldername,"bar/baz"), String) == "hello"
     rm(c)
 end
