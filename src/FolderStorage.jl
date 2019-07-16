@@ -19,6 +19,7 @@ struct Folder <: Container
     nretry::Int
 end
 Folder(foldername; nthreads=Sys.CPU_THREADS, nretry=10) = Folder(foldername, nthreads, nretry)
+AbstractStorage.Container(::Type{Folder}, d::Dict, session=nothing) = Folder(d["foldername"], d["nthreads"], d["nretry"])
 
 Base.mkpath(c::Folder) = mkpath(c.foldername)
 Base.mkpath(c::Folder, o::AbstractString) = mkpath(joinpath(c.foldername, splitpath(o)[1:end-1]...))

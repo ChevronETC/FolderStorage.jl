@@ -1,4 +1,4 @@
-using AbstractStorage, FolderStorage, Serialization, Test
+using AbstractStorage, FolderStorage, JSON, Serialization, Test
 
 base = get(ENV, "FOLDERSTORAGE_TESTDIR", ".")
 @info "running tests in $base"
@@ -119,5 +119,13 @@ end
     mkpath(c)
     write(c, "bar/baz", "hello")
     @test read(joinpath(c.foldername,"bar/baz"), String) == "hello"
+    rm(c)
+end
+
+@testset "json" begin
+    c = Container(Folder, JSON.parse(json(Folder(joinpath(base,"foo"), nthreads=2, nretry=5))))
+    @test c.foldername == joinpath(base,"foo")
+    @test c.nthreads == 2
+    @test c.nretry == 5
     rm(c)
 end
