@@ -124,7 +124,11 @@ end
 
 @testset "json" begin
     c = Container(Folder, JSON.parse(json(Folder(joinpath(base,"foo"), nthreads=2, nretry=5))))
-    @test c.foldername == joinpath(base,"foo")
+    if isabspath(normpath(joinpath(base,"foo")))
+        @test c.foldername == normpath(joinpath(base,"foo"))
+    else
+        @test c.foldername == normpath(joinpath(pwd(),base,"foo"))
+    end
     @test c.nthreads == 2
     @test c.nretry == 5
     rm(c)
