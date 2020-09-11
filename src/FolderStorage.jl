@@ -65,16 +65,28 @@ function Base.write(c::Folder, o::AbstractString, data::DenseArray)
     writebytes(c, o, databytes)
 end
 
+function byterange(iblock, block_size, block_remainder)
+    isremainder = iblock <= block_remainder
+    firstbyte = (iblock - 1)*block_size + (isremainder ? iblock : block_remainder + 1)
+    lastbyte = firstbyte + (isremainder ? block_size : block_size - 1)
+    firstbyte,lastbyte
+end
+
+function readbytes_thread(c, o, data, threadid, thread_size, thread_remainder)
+    firstbyte,lastbyte = byterange(threadid, thread_size, thread_remainder)
+    io = open(joinpath(c.foldername, o))
+    seek(io, firstbyte-1)
+    read!(io, view(data, firstbyte:lastbyte))
+    close(io)
+    nothing
+end
+
 function readbytes!(c::Folder, o::String, data::Vector{UInt8})
-    nthreads = clamp(c.nthreads, 1, length(data))
-    filename = joinpath(c.foldername, o)
-    function _readbytes!(c, o, data, nthreads)
-        ccall((:readbytes_threaded, libFolderStorage), Int,
-            (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
-                filename, data,       length(data), nthreads, c.nretry)
+    _nthreads = clamp(Threads.nthreads(), 1, length(data))
+    thread_size, thread_remainder = divrem(length(data), _nthreads)
+    @sync for threadid = 1:_nthreads
+        @async Threads.@spawn readbytes_thread(c, o, data, threadid, thread_size, thread_remainder)
     end
-    r = _readbytes!(c, o, data, nthreads)
-    r == 0 || error("problem reading from $c/$o.")
     data
 end
 
