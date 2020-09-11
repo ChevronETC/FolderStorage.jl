@@ -1,28 +1,25 @@
 module FolderStorage
 
-using AbstractStorage#=, FolderStorage_jll=#, Random, Serialization
-
-const libFolderStorage = normpath(joinpath(Base.source_path(),"..","..","deps","usr","lib","libFolderStorage"))
+using AbstractStorage, Random, Serialization
 
 struct Folder <: Container
     foldername::String
-    nthreads::Int
     nretry::Int
 end
 
 """
-    Folder(name[; nthreads=Sys.CPU_THREADS, nretry=10])
+    Folder(name[; nretry=10])
 
 Return a representation of a POSIX folder.
 """
-Folder(foldername; nthreads=Sys.CPU_THREADS, nretry=10) = Folder(isabspath(foldername) ? foldername : normpath(joinpath(pwd(), foldername)), nthreads, nretry)
+Folder(foldername; nretry=10) = Folder(isabspath(foldername) ? foldername : normpath(joinpath(pwd(), foldername)), nretry)
 
 """
     Container(Folder, d::Dict)
 
-Return a representation of a POSIX folder where, for example, `d=Dict("foldername"=>"name", "nthreads"=>8, "nretry"=>10)`.
+Return a representation of a POSIX folder where, for example, `d=Dict("foldername"=>"name", "nretry"=>10)`.
 """
-AbstractStorage.Container(::Type{Folder}, d::Dict, session=nothing) = Folder(d["foldername"]; nthreads = d["nthreads"], nretry = d["nretry"])
+AbstractStorage.Container(::Type{Folder}, d::Dict, session=nothing) = Folder(d["foldername"]; nretry = d["nretry"])
 
 """
     mkpath(c::Folder)
