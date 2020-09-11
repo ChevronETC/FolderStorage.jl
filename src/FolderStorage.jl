@@ -1,6 +1,8 @@
 module FolderStorage
 
-using AbstractStorage, FolderStorage_jll, Random, Serialization
+using AbstractStorage#=, FolderStorage_jll=#, Random, Serialization
+
+const libFolderStorage = normpath(joinpath(Base.source_path(),"..","..","deps","usr","lib","libFolderStorage"))
 
 struct Folder <: Container
     foldername::String
@@ -66,27 +68,13 @@ end
 function readbytes!(c::Folder, o::String, data::Vector{UInt8})
     nthreads = clamp(c.nthreads, 1, length(data))
     filename = joinpath(c.foldername, o)
-    if _haslibFolderStorage
-        function _readbytes!(c, o, data, nthreads)
-            ccall((:readbytes_threaded, libFolderStorage), Int,
-                (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
-                 filename, data,       length(data), nthreads, c.nretry)
-        end
-        r = _readbytes!(c, o, data, nthreads)
-        r == 0 || error("problem reading from $c/$o.")
-        return data
+    function _readbytes!(c, o, data, nthreads)
+        ccall((:readbytes_threaded, libFolderStorage), Int,
+            (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
+                filename, data,       length(data), nthreads, c.nretry)
     end
-
-    for i = 1:c.nretry
-        try
-            read!(joinpath(c.foldername, o), data)
-            return data
-        catch
-            @warn "problem reading from $c/$o, attempt $i."
-            sleep(0.1*2^(i-1))
-        end
-    end
-    error("problem reading from $c/$o in 10 attempts.")
+    r = _readbytes!(c, o, data, nthreads)
+    r == 0 || error("problem reading from $c/$o.")
     data
 end
 
