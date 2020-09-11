@@ -1,26 +1,32 @@
 module FolderStorage
 
-using AbstractStorage, Random, Serialization
-
-libname(basename) = Sys.iswindows() ? basename*".dll" : basename*".so"
-
-const _libFolderStorage = normpath(joinpath(Base.source_path(),"..","..","deps","usr","lib","libFolderStorage"))
-const _haslibFolderStorage = isfile(libname(_libFolderStorage))
-
-function __init__()
-    if !_haslibFolderStorage
-        @warn "FolderStorage is not built, we will not use openmp code paths."
-    end
-end
+using AbstractStorage, FolderStorage_jll, Random, Serialization
 
 struct Folder <: Container
     foldername::String
     nthreads::Int
     nretry::Int
 end
+
+"""
+    Folder(name[; nthreads=Sys.CPU_THREADS, nretry=10])
+
+Return a representation of a POSIX folder.
+"""
 Folder(foldername; nthreads=Sys.CPU_THREADS, nretry=10) = Folder(isabspath(foldername) ? foldername : normpath(joinpath(pwd(), foldername)), nthreads, nretry)
+
+"""
+    Container(Folder, d::Dict)
+
+Return a representation of a POSIX folder where, for example, `d=Dict("foldername"=>"name", "nthreads"=>8, "nretry"=>10)`.
+"""
 AbstractStorage.Container(::Type{Folder}, d::Dict, session=nothing) = Folder(d["foldername"]; nthreads = d["nthreads"], nretry = d["nretry"])
 
+"""
+    mkpath(c::Folder)
+
+equivalent to mkpath(c.foldername).
+"""
 Base.mkpath(c::Folder) = mkpath(c.foldername)
 Base.mkpath(c::Folder, o::AbstractString) = mkpath(joinpath(c.foldername, splitpath(o)[1:end-1]...))
 
@@ -35,6 +41,11 @@ function writebytes(c::Folder, o::AbstractString, data::AbstractArray{UInt8})
     error("problem writing to $c/$o in 10 attempts.")
 end
 
+"""
+    write(c::Folder, filename, data)
+
+Equivalent to write(joinpath(c.foldername, filename), data)
+"""
 function Base.write(c::Folder, o::AbstractString, data::AbstractString)
     mkpath(c, o)
     write(joinpath(c.foldername, o), data)
@@ -57,7 +68,7 @@ function readbytes!(c::Folder, o::String, data::Vector{UInt8})
     filename = joinpath(c.foldername, o)
     if _haslibFolderStorage
         function _readbytes!(c, o, data, nthreads)
-            ccall((:readbytes_threaded, _libFolderStorage), Int,
+            ccall((:readbytes_threaded, libFolderStorage), Int,
                 (Cstring,  Ptr{UInt8}, Csize_t,      Cint,     Cint),
                  filename, data,       length(data), nthreads, c.nretry)
         end
@@ -87,6 +98,11 @@ function Base.read(c::Folder, o::AbstractString)
     deserialize(io)
 end
 
+"""
+    Base.read!(c::Folder, filename, String, data)
+
+Equivalent to `read!(joinpath(c.foldername, filename), String, data).`
+"""
 function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}) where {T<:Number}
     databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
     readbytes!(c, o, databytes)

@@ -1,5 +1,4 @@
 *.swp
-deps/usr
-deps/build.log
 *.so
 *.o
+docs/build
