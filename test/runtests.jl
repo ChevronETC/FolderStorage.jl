@@ -68,8 +68,8 @@ end
     rm(c)
 end
 
-@testset "read!, canonical, nthreads=$nthreads" for nthreads in (1, 4)
-    c = Folder(joinpath(base,"foo"), nthreads=nthreads)
+@testset "read!, canonical" begin
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     x = rand(10)
     write(c.foldername*"/o", x)
@@ -94,8 +94,8 @@ end
     rm(c)
 end
 
-@testset "read!, serialized, nthreads=$nthreads" for nthreads in (1,4)
-    c = Folder(joinpath(base,"foo"), nthreads=nthreads)
+@testset "read!, serialized" begin
+    c = Folder(joinpath(base,"foo"))
     mkpath(c)
     io = open(c.foldername*"/o", "w")
     x = [Foo(1,2.0)]
@@ -123,13 +123,12 @@ end
 end
 
 @testset "json" begin
-    c = Container(Folder, JSON.parse(json(Folder(joinpath(base,"foo"), nthreads=2, nretry=5))))
+    c = Container(Folder, JSON.parse(json(Folder(joinpath(base,"foo"), nretry=5))))
     if isabspath(normpath(joinpath(base,"foo")))
         @test c.foldername == normpath(joinpath(base,"foo"))
     else
         @test c.foldername == normpath(joinpath(pwd(),base,"foo"))
     end
-    @test c.nthreads == 2
     @test c.nretry == 5
     rm(c)
 end
