@@ -79,10 +79,14 @@ function readbytes_thread(c, o, data, threadid, thread_size, thread_remainder)
 end
 
 function readbytes!(c::Folder, o::String, data::Vector{UInt8})
-    _nthreads = clamp(Threads.nthreads(), 1, length(data))
-    thread_size, thread_remainder = divrem(length(data), _nthreads)
-    @sync for threadid = 1:_nthreads
-        @async Threads.@spawn readbytes_thread(c, o, data, threadid, thread_size, thread_remainder)
+    if VERSOIN >= v"1.4"
+        _nthreads = clamp(Threads.nthreads(), 1, length(data))
+        thread_size, thread_remainder = divrem(length(data), _nthreads)
+        @sync for threadid = 1:_nthreads
+            @async Threads.@spawn readbytes_thread(c, o, data, threadid, thread_size, thread_remainder)
+        end
+    else
+        read!(joinpath(c, o), data)
     end
     data
 end
