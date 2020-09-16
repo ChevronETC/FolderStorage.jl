@@ -133,6 +133,11 @@ function Base.isfile(c::Folder, object::AbstractString)
     isfile(joinpath(c.foldername, object)) || isfile(string(joinpath(c.foldername, object), "-1"))
 end
 
+"""
+    rm(c::Folder)
+
+Equivalent to `rm(c.foldername)`.
+"""
 function Base.rm(c::Folder)
     for itry = 1:c.nretry
         try
@@ -140,6 +145,25 @@ function Base.rm(c::Folder)
             break
         catch
             @warn "unable to remove $(c.foldername), trial $itry"
+            itry == c.nretry && rethrow()
+        end
+        sleep(0.1*2^(itry-1))
+    end
+    nothing
+end
+
+"""
+    rm(c::Folder, filename)
+
+Equivalent to `rm(joinpath(c.foldername, filename))`.
+"""
+function Base.rm(c::Folder, filename)
+    for itry = 1:c.nretry
+        try
+            rm(joinpath(c.foldername, filename), recursive=true, force=true)
+            break
+        catch
+            @warn "unable to remove $(joinpath(c.foldername, filename)), trial $itry"
             itry == c.nretry && rethrow()
         end
         sleep(0.1*2^(itry-1))
