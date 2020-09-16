@@ -10,11 +10,21 @@ base = get(ENV, "FOLDERSTORAGE_TESTDIR", ".")
     rm(c)
 end
 
-@testset "rm" begin
+@testset "rm folder" begin
     c = Folder(joinpath(base,"foo"))
     mkpath(c)
     rm(c)
     @test !isdir(joinpath(base,"foo"))
+end
+
+@testset "rm file" begin
+    c = Folder(joinpath(base,"foo"))
+    write(c, "bar", rand(2))
+    @test isfile(joinpath(base,"foo","bar"))
+    rm(c, "bar")
+    @test !isfile(joinpath(base,"foo","bar"))
+    @test isdir(joinpath(base,"foo"))
+    rm(c)
 end
 
 @testset "copy" begin
