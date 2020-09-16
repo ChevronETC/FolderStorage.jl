@@ -126,6 +126,8 @@ Base.copy(src::Folder) = Folder(src.foldername*"-copy-"*randstring(4))
 Base.readdir(src::Folder) = readdir(src.foldername)
 Base.isdir(src::Folder) = isdir(src.foldername)
 
+AbstractStorage.scrubsession(c::Folder) = c
+
 function Base.isfile(c::Folder, object::AbstractString)
     # TODO: this feels like a kludge.  the trouble is that the file can
     # be written to jointpath(c,object) or a set of files, one for each
