@@ -142,3 +142,10 @@ end
     @test c.nretry == 5
     rm(c)
 end
+
+@testset "minimal dictionary" begin
+    c = Container(Folder, JSON.parse(json(Folder(joinpath(base,"foo"), nretry=5))))
+    _c = minimaldict(c)
+    @test _c["foldername"] == normpath(joinpath(pwd(),base,"foo"))
+    @test length(_c) == 1
+end

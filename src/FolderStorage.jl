@@ -19,7 +19,8 @@ Folder(foldername; nretry=10) = Folder(isabspath(foldername) ? foldername : norm
 
 Return a representation of a POSIX folder where, for example, `d=Dict("foldername"=>"name", "nretry"=>10)`.
 """
-AbstractStorage.Container(::Type{Folder}, d::Dict, session=nothing) = Folder(d["foldername"]; nretry = d["nretry"])
+AbstractStorage.Container(::Type{Folder}, d::Dict, session=nothing; nretry=10) =
+    Folder(d["foldername"]; nretry = get(d, "nretry", nretry))
 
 """
     mkpath(c::Folder)
@@ -127,6 +128,8 @@ Base.readdir(src::Folder) = readdir(src.foldername)
 Base.isdir(src::Folder) = isdir(src.foldername)
 
 AbstractStorage.scrubsession(c::Folder) = c
+
+AbstractStorage.minimaldict(c::Folder) = Dict("foldername"=>c.foldername)
 
 function Base.isfile(c::Folder, object::AbstractString)
     # TODO: this feels like a kludge.  the trouble is that the file can
