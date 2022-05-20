@@ -50,6 +50,15 @@ end
     rm(c)
 end
 
+@testset "touch" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    touch(c, "bar")
+    @test isfile(c, "bar")
+    @test filesize(c, "bar") == 0
+    rm(c)
+end
+
 @testset "isfile" begin
     c = Folder(joinpath(base,"foo"))
     mkpath(c)
