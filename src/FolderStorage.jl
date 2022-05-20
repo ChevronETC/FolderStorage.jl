@@ -126,7 +126,16 @@ Base.cp(src::Folder, dst::Folder) = cp(src.foldername, dst.foldername, force=tru
 Base.copy(src::Folder) = Folder(src.foldername*"-copy-"*randstring(4))
 Base.readdir(src::Folder) = readdir(src.foldername)
 Base.isdir(src::Folder) = isdir(src.foldername)
-Base.touch(c::Folder, o::AbstractString) = touch(joinpath(c.foldername, o))
+
+function Base.touch(c::Folder, o::AbstractString)
+    file = joinpath(c.foldername, o)
+    _folder = splitpath(file)[1:end-1]
+    if length(_folder) > 0
+        folder = VERSION >= v"1.7" ? joinpath(_folder) : joinpath(_folder...)
+        isdir(folder) || mkpath(folder)
+    end
+    touch(file)
+end
 
 AbstractStorage.scrubsession(c::Folder) = c
 
