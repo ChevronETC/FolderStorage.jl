@@ -126,6 +126,7 @@ Base.cp(src::Folder, dst::Folder) = cp(src.foldername, dst.foldername, force=tru
 Base.copy(src::Folder) = Folder(src.foldername*"-copy-"*randstring(4))
 Base.readdir(src::Folder) = readdir(src.foldername)
 Base.isdir(src::Folder) = isdir(src.foldername)
+Base.touch(c::Folder, o::AbstractString) = touch(joinpath(c.foldername, o))
 
 AbstractStorage.scrubsession(c::Folder) = c
 
