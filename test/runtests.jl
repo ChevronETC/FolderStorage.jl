@@ -48,6 +48,7 @@ end
     @test isdir(d)
     @test read!(d, "o", Vector{Float64}(undef, 10)) == x
     rm(c)
+    rm(d)
 end
 
 @testset "touch" begin
@@ -56,6 +57,14 @@ end
     touch(c, "bar")
     @test isfile(c, "bar")
     @test filesize(c, "bar") == 0
+    rm(c)
+end
+
+@testset "touch with sub-folder" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    touch(c, "bar/baz")
+    @test isfile(c, "bar/baz")
     rm(c)
 end
 
