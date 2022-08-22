@@ -167,3 +167,25 @@ end
     @test _c["foldername"] == normpath(joinpath(pwd(),base,"foo"))
     @test length(_c) == 1
 end
+
+@testset "cp file" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    x = rand(10)
+    write(c, "o", x)
+    d = Folder(joinpath(base,"bar"))
+    mkpath(d)
+    cp(c, "o", d, "p")
+    @test read!(d, "p", Vector{Float64}(undef,10)) ≈ x
+    rm(c)
+    rm(d)
+end
+
+@testset "joinpath" begin
+    c = Folder(joinpath(base, "foo"))
+    mkpath(c)
+    o = joinpath(c, "o")
+    write(o, "hello")
+    @test read(o, String) == "hello"
+    rm(c)
+end
