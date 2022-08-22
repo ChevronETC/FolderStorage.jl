@@ -121,9 +121,14 @@ function Base.deepcopy(src::Folder)
     dst
 end
 
+function Base.cp(src::Folder, src_object::AbstractString, dst::Folder, dst_object::AbstractString)
+    pth = joinpath(dst.foldername, split(dst_object, '/')[1:end-1]...)
+    isdir(pth) || mkpath(pth)
+    cp(joinpath(src.foldername, src_object), joinpath(dst.foldername, dst_object), force=true)
+end
+
 Base.filesize(c::Folder, o::AbstractString) = filesize(joinpath(c.foldername, o))
 Base.cp(src::Folder, dst::Folder) = cp(src.foldername, dst.foldername, force=true)
-Base.cp(src::Folder, src_object::AbstractString, dst::Folder, dst_object::AbstractString) = cp(joinpath(src.foldername, src_object), joinpath(dst.foldername, dst_object), force=true)
 Base.joinpath(src::Folder, object::AbstractString) = joinpath(src.foldername, object)
 Base.copy(src::Folder) = Folder(src.foldername*"-copy-"*randstring(4))
 Base.readdir(src::Folder) = readdir(src.foldername)

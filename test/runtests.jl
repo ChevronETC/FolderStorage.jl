@@ -181,6 +181,19 @@ end
     rm(d)
 end
 
+@testset "cp file with prefix" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    x = rand(10)
+    write(c, "o", x)
+    d = Folder(joinpath(base,"bar"))
+    mkpath(d)
+    cp(c, "o", d, "p/p")
+    @test read!(d, "p/p", Vector{Float64}(undef,10)) ≈ x
+    rm(c)
+    rm(d)
+end
+
 @testset "joinpath" begin
     c = Folder(joinpath(base, "foo"))
     mkpath(c)
