@@ -157,7 +157,7 @@ end
     @test _x[2].y ≈ x[3].y
 end
 
-@test_skip @testset "read/write string" begin
+@testset "read/write string" begin
     c = Folder(joinpath(base,"foo"))
     mkpath(c)
     write(c, "bar", "hello")
