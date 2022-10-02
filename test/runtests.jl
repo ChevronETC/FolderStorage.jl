@@ -105,6 +105,15 @@ end
     rm(c)
 end
 
+@testset "read!, canonical, with offset" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    x = rand(10)
+    write(c.foldername*"/o", x)
+    @test read!(c, "o", Vector{Float64}(undef, 9); offset=1) == x[2:end]
+    rm(c)
+end
+
 struct Foo
     x::Int
     y::Float64
@@ -134,7 +143,21 @@ end
     @test _x[1].y ≈ x[1].y
 end
 
-@testset "read/write string" begin
+@testset "read!, serialized, offset" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    io = open(c.foldername*"/o", "w")
+    x = [Foo(1,2.0), Foo(3,4.0), Foo(5,6.0)]
+    serialize(io, x)
+    close(io)
+    _x = read!(c, "o", Vector{Foo}(undef, 2); offset=1)
+    @test _x[1].x == x[2].x
+    @test _x[1].y ≈ x[2].y
+    @test _x[2].x == x[3].x
+    @test _x[2].y ≈ x[3].y
+end
+
+@test_skip @testset "read/write string" begin
     c = Folder(joinpath(base,"foo"))
     mkpath(c)
     write(c, "bar", "hello")

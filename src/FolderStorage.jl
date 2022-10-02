@@ -70,20 +70,20 @@ function byterange(iblock, block_size, block_remainder)
     firstbyte,lastbyte
 end
 
-function readbytes_thread(c, o, data, threadid, thread_size, thread_remainder)
+function readbytes_thread(c, o, data, threadid, thread_size, thread_remainder; offset=0)
     firstbyte,lastbyte = byterange(threadid, thread_size, thread_remainder)
     io = open(joinpath(c.foldername, o))
-    seek(io, firstbyte-1)
+    seek(io, offset+firstbyte-1)
     read!(io, view(data, firstbyte:lastbyte))
     close(io)
     nothing
 end
 
-function readbytes!(c::Folder, o::String, data::Vector{UInt8})
+function readbytes!(c::Folder, o::String, data::Vector{UInt8}; offset=0)
     _nthreads = clamp(Threads.nthreads(), 1, length(data))
     thread_size, thread_remainder = divrem(length(data), _nthreads)
     @sync for threadid = 1:_nthreads
-        @async Threads.@spawn readbytes_thread(c, o, data, threadid, thread_size, thread_remainder)
+        @async Threads.@spawn readbytes_thread(c, o, data, threadid, thread_size, thread_remainder; offset)
     end
     data
 end
@@ -101,17 +101,18 @@ end
 
 Equivalent to `read!(joinpath(c.foldername, filename), String, data).`
 """
-function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}) where {T<:Number}
+function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}; offset=0) where {T<:Number}
     databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
-    readbytes!(c, o, databytes)
+    readbytes!(c, o, databytes; offset=offset*sizeof(T))
     data
 end
 
-function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}) where {T}
+function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}; offset=0) where {T}
     databytes = Vector{UInt8}(undef, filesize(c, o))
     readbytes!(c, o, databytes)
     io = IOBuffer(databytes)
-    data .= deserialize(io)
+    _data = deserialize(io)
+    data .= @view _data[1+offset:end]
     data
 end
 
