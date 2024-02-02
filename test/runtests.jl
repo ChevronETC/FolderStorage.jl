@@ -225,3 +225,14 @@ end
     @test read(o, String) == "hello"
     rm(c)
 end
+
+@testset "equality" begin
+    c = Folder(joinpath(base, "foo"))
+    d = Folder(joinpath(base, "foo"))
+    e = Folder(joinpath(base, "bar"))
+    @test c == d
+    @test c != e
+    rm(c)
+    rm(d)
+    rm(e)
+end

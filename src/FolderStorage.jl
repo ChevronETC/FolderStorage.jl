@@ -22,6 +22,8 @@ Return a representation of a POSIX folder where, for example, `d=Dict("foldernam
 AbstractStorage.Container(::Type{Folder}, d::Dict, session=nothing; nretry=10) =
     Folder(d["foldername"]; nretry = get(d, "nretry", nretry))
 
+Base.:(==)(x::Folder, y::Folder) = x.foldername == y.foldername
+
 """
     mkpath(c::Folder)
 
