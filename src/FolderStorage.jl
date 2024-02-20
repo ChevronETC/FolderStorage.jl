@@ -151,6 +151,8 @@ AbstractStorage.scrubsession(c::Folder) = c
 
 AbstractStorage.minimaldict(c::Folder) = Dict("foldername"=>c.foldername)
 
+AbstractStorage.backend(c::Folder) = "posix"
+
 function Base.isfile(c::Folder, object::AbstractString)
     # TODO: this feels like a kludge.  the trouble is that the file can
     # be written to jointpath(c,object) or a set of files, one for each

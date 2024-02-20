@@ -236,3 +236,8 @@ end
     rm(d)
     rm(e)
 end
+
+@testset "backend" begin
+    c = Folder(joinpath(base, "foo"))
+    @test backend(c) == "posix"
+end
