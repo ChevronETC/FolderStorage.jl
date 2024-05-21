@@ -53,12 +53,20 @@ function Base.write(c::Folder, o::AbstractString, data::AbstractString)
     write(joinpath(c.foldername, o), data)
 end
 
-function Base.write(c::Folder, o::AbstractString, data::DenseArray{T}) where {T<:Number}
-    databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), sizeof(data), own=false)
-    writebytes(c, o, databytes)
+_iscontiguous(data::DenseArray) = isbitstype(eltype(data))
+_iscontiguous(data::SubArray) = isbitstype(eltype(data)) && Base.iscontiguous(data)
+_iscontiguous(data::AbstractArray) = false
+
+function Base.write(c::Folder, o::AbstractString, data::AbstractArray{T}) where {T<:Number}
+    if _iscontiguous(data)
+        databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), sizeof(data), own=false)
+        writebytes(c, o, databytes)
+    else
+        error("FolderStorage: `write` is not supported for non-contiguous arrays")
+    end
 end
 
-function Base.write(c::Folder, o::AbstractString, data::DenseArray)
+function Base.write(c::Folder, o::AbstractString, data::AbstractArray)
     io = IOBuffer()
     serialize(io, data)
     databytes = take!(io)
@@ -103,13 +111,17 @@ end
 
 Equivalent to `read!(joinpath(c.foldername, filename), String, data).`
 """
-function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}; offset=0) where {T<:Number}
-    databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
-    readbytes!(c, o, databytes; offset=offset*sizeof(T))
+function Base.read!(c::Folder, o::AbstractString, data::AbstractArray{T}; offset=0) where {T<:Number}
+    if _iscontiguous(data)
+        databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
+        readbytes!(c, o, databytes; offset=offset*sizeof(T))
+    else
+        error("FolderStorage: `read` is not supported for non-contiguous arrays.")
+    end
     data
 end
 
-function Base.read!(c::Folder, o::AbstractString, data::DenseArray{T}; offset=0) where {T}
+function Base.read!(c::Folder, o::AbstractString, data::AbstractArray{T}; offset=0) where {T}
     databytes = Vector{UInt8}(undef, filesize(c, o))
     readbytes!(c, o, databytes)
     io = IOBuffer(databytes)
