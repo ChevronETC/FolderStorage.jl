@@ -114,6 +114,29 @@ end
     rm(c)
 end
 
+@testset "read!, serial" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    x = rand(10)
+    write(c.foldername*"/o", x)
+    @test read!(c, "o", Vector{Float64}(undef, 10); serial=true) == x
+    rm(c)
+end
+
+@testset "read!, file does note exist" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    @test_throws FileDoesNotExistError read!(c, "o", Vector{Float64}(undef, 1))
+    rm(c)
+end
+
+@testset "read!, file does note exist, serial=true" begin
+    c = Folder(joinpath(base,"foo"))
+    mkpath(c)
+    @test_throws FileDoesNotExistError read!(c, "o", Vector{Float64}(undef, 1); serial=true)
+    rm(c)
+end
+
 struct Foo
     x::Int
     y::Float64

@@ -82,14 +82,72 @@ end
 
 function readbytes_thread(c, o, data, threadid, thread_size, thread_remainder; offset=0)
     firstbyte,lastbyte = byterange(threadid, thread_size, thread_remainder)
-    io = open(joinpath(c.foldername, o))
+    local io
+    try
+        io = open(joinpath(c.foldername, o))
+    catch e
+        if !isfile(joinpath(c.foldername, o))
+            throw(FileDoesNotExistError())
+        end
+        throw(e)
+    end
     seek(io, offset+firstbyte-1)
     read!(io, view(data, firstbyte:lastbyte))
     close(io)
     nothing
 end
 
-function readbytes!(c::Folder, o::String, data::Vector{UInt8}; offset=0)
+function readbytes_threaded!(c::Folder, o::String, data::Vector{UInt8}; offset=0)
+    _nthreads = clamp(Threads.nthreads(), 1, length(data))
+    thread_size, thread_remainder = divrem(length(data), _nthreads)
+    try
+        @sync for threadid = 1:_nthreads
+            Threads.@spawn readbytes_thread(c, o, data, threadid, thread_size, thread_remainder; offset)
+        end
+    catch e
+        if isa(e, CompositeException)
+            for ex in e
+                if isa(ex, TaskFailedException)
+                    stk = current_exceptions(ex.task)
+                    for stkex in stk
+                        if isa(stkex.exception, FileDoesNotExistError)
+                            throw(FileDoesNotExistError())
+                        end
+                    end
+                end
+            end
+        end
+        throw(e)
+    end
+    data
+end
+
+function readbytes_serial!(c::Folder, o::String, data::Vector{UInt8}; offset=0)
+    local io
+    try
+        io = open(joinpath(c.foldername, o))
+    catch e
+        @info "one"
+        if !isfile(joinpath(c.foldername, o))
+            @info "two"
+            showerror(stderr, e)
+            @info "three"
+            throw(FileDoesNotExistError())
+        end
+        throw(e)
+    end
+    seek(io, offset)
+    read!(io, data)
+    close(io)
+    nothing
+end
+
+function readbytes!(c::Folder, o::String, data::Vector{UInt8}; offset=0, serial=false)
+    if serial
+        readbytes_serial!(c, o, data; offset)
+    else
+        readbytes_threaded!(c, o, data; offset)
+    end
     _nthreads = clamp(Threads.nthreads(), 1, length(data))
     thread_size, thread_remainder = divrem(length(data), _nthreads)
     @sync for threadid = 1:_nthreads
@@ -107,14 +165,14 @@ function Base.read(c::Folder, o::AbstractString)
 end
 
 """
-    Base.read!(c::Folder, filename, String, data)
+    Base.read!(c::Folder, filename::String, data; offset=0, serial=false)
 
 Equivalent to `read!(joinpath(c.foldername, filename), String, data).`
 """
-function Base.read!(c::Folder, o::AbstractString, data::AbstractArray{T}; offset=0) where {T<:Number}
+function Base.read!(c::Folder, o::AbstractString, data::AbstractArray{T}; offset=0, serial=false) where {T<:Number}
     if _iscontiguous(data)
         databytes = unsafe_wrap(Array, convert(Ptr{UInt8}, pointer(data)), (sizeof(data),))
-        readbytes!(c, o, databytes; offset=offset*sizeof(T))
+        readbytes!(c, o, databytes; offset=offset*sizeof(T), serial)
     else
         error("FolderStorage: `read` is not supported for non-contiguous arrays.")
     end
